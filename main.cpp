@@ -3,6 +3,7 @@
 #include <string>
 #include <cstdio>
 #include <ctime>
+#include <iostream>
 #include <boost/cstdint.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/asio.hpp>

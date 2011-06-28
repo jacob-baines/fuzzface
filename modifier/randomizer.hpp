@@ -1,3 +1,6 @@
+#ifndef RANDOMIZER_HPP
+#define RANDOMIZER_HPP
+
 #include <map>
 #include <boost/cstdint.hpp>
 
@@ -23,3 +26,5 @@ namespace modifier
     
     };
 }
+#endif /* RANDOMIZER_HPP */
+

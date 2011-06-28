@@ -22,6 +22,7 @@ int main(int argc, char* argv[])
     
     std::ifstream filestream;
     modifier::Randomizer packetModifier;    
+    bool writeGlobal = true;
     
     boost::asio::io_service ioHandler;
     boost::asio::ip::tcp::socket outputSocket(ioHandler);
@@ -45,14 +46,29 @@ int main(int argc, char* argv[])
                 if (memcmp(readBuffer, "\xd4\xc3\xb2\xa1", 4) == 0)
                 {               
                     //read the global header - link type is the last four
-                    boost::asio::write(outputSocket, boost::asio::buffer(readBuffer, 4));
+                    if (writeGlobal)
+                    {
+                        boost::asio::write(outputSocket, boost::asio::buffer(readBuffer, 4));
+                    }
+                    
                     filestream.read(readBuffer, 20);
-                    boost::asio::write(outputSocket, boost::asio::buffer(readBuffer, 20));
+                    
+                    if (writeGlobal)
+                    {
+                        boost::asio::write(outputSocket, boost::asio::buffer(readBuffer, 20));
+                        writeGlobal = false;
+                    }
                         
                     while (!filestream.eof())
                     {
-                        //read the first 3 bytes of the pcap header
+                        //read start of next header
                         filestream.read(readBuffer, 12);
+                        
+                        if (filestream.eof())
+                        {
+                            break;
+                        }
+                                           
                         timestamp = std::time(NULL);
                         memcpy(readBuffer, &timestamp, sizeof(boost::uint32_t));
                         memcpy(readBuffer + sizeof(boost::uint32_t), "\0\0\0\0", 4);
@@ -71,7 +87,6 @@ int main(int argc, char* argv[])
                         boost::asio::write(outputSocket, boost::asio::buffer(readBuffer, frameSize));
                     }
                     
-                    outputSocket.close();
                     printf("file completed\n");
                 }
             }
@@ -79,6 +94,7 @@ int main(int argc, char* argv[])
             filestream.close();
         }
     }
-    
+ 
+    outputSocket.close();   
     return 0;
 }

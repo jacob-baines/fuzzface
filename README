@@ -1,4 +1,4 @@
-Fuzzface version 0.1005:
+Fuzzface version 0.1006:
 
 
 Fuzzface is a simple program that recursively walks a given directory tree looking for pcap files. When fuzzface believes it has found a pcap file then it will fuzz 10% of the packet data (not the pcap headers themselves). Fuzzface will then send the data out over a socket. Fuzzface will update the pcap packet header timestamp as it goes so that multiple files will look 'sequential.' Fuzzface does no honor the gap between the original timestamps. In short, fuzzface is (currently) a dumb pcap fuzzer.

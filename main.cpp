@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
     boost::asio::ip::tcp::endpoint server(boost::asio::ip::address::from_string("127.0.0.1"), 11111);
     outputSocket.connect(server);
 
-    //boost::uint32_t timestamp = 0;
+    boost::uint32_t timestamp = 0;
     
     for (boost::filesystem::recursive_directory_iterator iter(rootDirectory);
          iter != boost::filesystem::recursive_directory_iterator(); ++iter)
@@ -103,10 +103,10 @@ int main(int argc, char* argv[])
                     break;
                 }
                                            
-               // timestamp = std::time(NULL);
-               // memcpy(readBuffer, &timestamp, sizeof(boost::uint32_t));
-               // memcpy(readBuffer + sizeof(boost::uint32_t), "\0\0\0\0", 4);
-               // boost::asio::write(outputSocket, boost::asio::buffer(readBuffer, 16));
+                timestamp = std::time(NULL);
+                memcpy(readBuffer, &timestamp, sizeof(boost::uint32_t));
+                memcpy(readBuffer + sizeof(boost::uint32_t), "\0\0\0\0", 4);
+                boost::asio::write(outputSocket, boost::asio::buffer(readBuffer, 16));
                 boost::uint32_t frameSize = *reinterpret_cast<boost::uint32_t*>(readBuffer + 12);
                         
                 filestream.read(readBuffer, frameSize);

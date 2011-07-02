@@ -19,3 +19,4 @@
 14. Support windows? :(
 15. More OO approach. All logic in main is hard to unit test :x
 16. Configure / make / make install? Not sure if this will be used that way.
+17. Better makefile. Completely hacked right now.

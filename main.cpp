@@ -59,6 +59,55 @@ bool validateInput(int argc, char* argv[],
     return true;
 }
 
+/*
+    Reads in the PCAP global header and tries to verify that
+    the file is little endian pcap with ethernet link type.
+    
+    \return true iff the file is little endian pcap with enet link type
+*/
+bool validateGlobalHeader(std::ifstream& p_fileStream, 
+                          boost::filesystem::recursive_directory_iterator& p_iter,
+                          char* p_readBuffer)
+{
+    if (!p_fileStream.good())
+    {
+        std::cerr << "File skipped: " << p_iter->path().string()
+                  << " failed to open." << std::endl;
+        return false;                
+    }
+            
+    //read the global pcap header
+    p_fileStream.read(p_readBuffer, 24);
+                
+    if (p_fileStream.eof())
+    {
+        std::cerr << "File skipped: " << p_iter->path().string()
+                  << " not enough data." << std::endl;
+        p_fileStream.close();
+        return false;
+    }
+    
+    //check for PCAP magic bytes (little endian)        
+    if (memcmp(p_readBuffer, "\xd4\xc3\xb2\xa1", 4) != 0)
+    {
+        std::cerr << "File skipped: " << p_iter->path().string()
+                  << " couldn't find magic bytes." << std::endl;
+        p_fileStream.close();
+        return false;
+    }
+    
+    //verify link type in PCAP header
+    if (memcmp(p_readBuffer + 20, "\x01\x00\x00\x00", 4) != 0)
+    {
+        std::cerr << "File skipped: " << p_iter->path().string() 
+                  << " link type is not ethernet." << std::endl;
+        p_fileStream.close();
+        return false;
+    }
+    
+    return true;
+}
+
 int main(int argc, char* argv[])
 {   
     if (!validateInput(argc, argv, s_rootDirectory, s_seedValue))
@@ -85,39 +134,12 @@ int main(int argc, char* argv[])
         {
             filestream.open(iter->path().string().c_str(), std::ifstream::in);
             
-            if (!filestream.good())
+            if (!validateGlobalHeader(filestream, iter, s_readBuffer))
             {
-                std::cout << "File skipped: " << iter->path().string() << " failed to open." << std::endl;
-                continue;                
-            }
-            
-            //read the global pcap header
-            filestream.read(s_readBuffer, 24);
-                
-            if (filestream.eof())
-            {
-                std::cout << "File skipped: " << iter->path().string()
-                          << " not enough data." << std::endl;
-                filestream.close();
+                //skip this file
                 continue;
             }
-            
-            if (memcmp(s_readBuffer, "\xd4\xc3\xb2\xa1", 4) != 0)
-            {
-                std::cerr << "File skipped: " << iter->path().string()
-                          << " couldn't find magic bytes." << std::endl;
-                filestream.close();
-                continue;
-            }
-            
-            if (memcmp(s_readBuffer + 20, "\x01\x00\x00\x00", 4) != 0)
-            {
-                std::cout << "File skipped: " << iter->path().string() 
-                          << " link type is not ethernet." << std::endl;
-                filestream.close();
-                continue;
-            }
-            
+                              
             if (writeGlobal)
             {
                 boost::asio::write(outputSocket, boost::asio::buffer(s_readBuffer, 24));

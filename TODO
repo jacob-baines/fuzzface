@@ -8,3 +8,10 @@
    b) ipv4
    c) tcp
    d) udp
+7. Support big endian files
+8. Unit tests
+9. Allow for infinitely looping over a directory
+10. Make code exception safe :x
+11. --help command
+12. A better usage statement. Switch over to boost's options?
+13. Statistics (bytes, packets, files, loops(?), etc)

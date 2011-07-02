@@ -12,29 +12,60 @@
 #include <boost/asio/io_service.hpp>
 #include "modifier/randomizer.hpp"
 
-static char readBuffer[65356] = {0};
+static char s_readBuffer[65356] = {0};
+static std::string s_rootDirectory;
+static int s_seedValue = 0;
 
-int main(int argc, char* argv[])
+/*
+    Checks to make sure the command line params are present and
+    valid. Also, initializes srand here.
+*/
+bool validateInput(int argc, char* argv[],
+                   std::string& p_rootDirectory, int& p_seedValue)
 {
+    //currently we need argc to be 2 or 3
     if (argc < 2 || argc > 3)
     {
-        std::cout << "You aren't doing it right." << std::endl;
-        return 0;
+        return false;
+    }
+
+    p_rootDirectory.assign(argv[1]);
+    if (!boost::filesystem::is_directory(p_rootDirectory))
+    {
+        std::cerr << p_rootDirectory << " is not a directory." << std::endl;
+        return false;
     }
     
-    std::string rootDirectory(argv[1]);
-    int seedValue = 0;
-    
+    // use the seed provided or generate a new one
     if (argc == 3)
     {
-        seedValue = boost::lexical_cast<int>(argv[2]);
+        try
+        {
+            p_seedValue = boost::lexical_cast<int>(argv[2]);
+        }
+        catch (std::exception& e)
+        {
+            std::cerr << "Failed to convert your seed value to an integer."
+                      << std::endl;
+            return false;
+        }
     }
     else
     {
-        seedValue = std::time(NULL);
-    }
+        p_seedValue = std::time(NULL);
+    }    
     
-    srand(seedValue);
+    srand(p_seedValue);
+    return true;
+}
+
+int main(int argc, char* argv[])
+{   
+    if (!validateInput(argc, argv, s_rootDirectory, s_seedValue))
+    {
+        std::cout << "Usage: ./fuzzface <directory>" << std::endl;
+        return EXIT_FAILURE;
+    }
     
     std::ifstream filestream;
     modifier::Randomizer packetModifier;    
@@ -47,7 +78,7 @@ int main(int argc, char* argv[])
 
     boost::uint32_t timestamp = 0;
     
-    for (boost::filesystem::recursive_directory_iterator iter(rootDirectory);
+    for (boost::filesystem::recursive_directory_iterator iter(s_rootDirectory);
          iter != boost::filesystem::recursive_directory_iterator(); ++iter)
     {
         if (boost::filesystem::is_regular_file(iter->path()))
@@ -61,7 +92,7 @@ int main(int argc, char* argv[])
             }
             
             //read the global pcap header
-            filestream.read(readBuffer, 24);
+            filestream.read(s_readBuffer, 24);
                 
             if (filestream.eof())
             {
@@ -71,15 +102,15 @@ int main(int argc, char* argv[])
                 continue;
             }
             
-            if (memcmp(readBuffer, "\xd4\xc3\xb2\xa1", 4) != 0)
+            if (memcmp(s_readBuffer, "\xd4\xc3\xb2\xa1", 4) != 0)
             {
-                std::cout << "File skipped: " << iter->path().string()
+                std::cerr << "File skipped: " << iter->path().string()
                           << " couldn't find magic bytes." << std::endl;
                 filestream.close();
                 continue;
             }
             
-            if (memcmp(readBuffer + 20, "\x01\x00\x00\x00", 4) != 0)
+            if (memcmp(s_readBuffer + 20, "\x01\x00\x00\x00", 4) != 0)
             {
                 std::cout << "File skipped: " << iter->path().string() 
                           << " link type is not ethernet." << std::endl;
@@ -89,14 +120,14 @@ int main(int argc, char* argv[])
             
             if (writeGlobal)
             {
-                boost::asio::write(outputSocket, boost::asio::buffer(readBuffer, 24));
+                boost::asio::write(outputSocket, boost::asio::buffer(s_readBuffer, 24));
                 writeGlobal = false;
             }
         
             while (!filestream.eof())
             {   
                 //read start of next header
-                filestream.read(readBuffer, 16);
+                filestream.read(s_readBuffer, 16);
                         
                 if (filestream.eof())
                 {
@@ -104,12 +135,12 @@ int main(int argc, char* argv[])
                 }
                                            
                 timestamp = std::time(NULL);
-                memcpy(readBuffer, &timestamp, sizeof(boost::uint32_t));
-                memcpy(readBuffer + sizeof(boost::uint32_t), "\0\0\0\0", 4);
+                memcpy(s_readBuffer, &timestamp, sizeof(boost::uint32_t));
+                memcpy(s_readBuffer + sizeof(boost::uint32_t), "\0\0\0\0", 4);
                 
-                boost::uint32_t frameSize = *reinterpret_cast<boost::uint32_t*>(readBuffer + 8);
+                boost::uint32_t frameSize = *reinterpret_cast<boost::uint32_t*>(s_readBuffer + 8);
 
-                if (frameSize > sizeof(readBuffer))
+                if (frameSize > sizeof(s_readBuffer))
                 {
                     std::cout << "Frame too large (" << frameSize
                               << " bytes): " << iter->path().string()
@@ -117,14 +148,14 @@ int main(int argc, char* argv[])
                     break;
                 }
 
-                boost::asio::write(outputSocket, boost::asio::buffer(readBuffer, 16));
+                boost::asio::write(outputSocket, boost::asio::buffer(s_readBuffer, 16));
                                                                
-                filestream.read(readBuffer, frameSize);
+                filestream.read(s_readBuffer, frameSize);
                 packetModifier.modifyData(
-                    reinterpret_cast<unsigned char*>(readBuffer),
+                    reinterpret_cast<unsigned char*>(s_readBuffer),
                     static_cast<boost::uint16_t>(frameSize));
                         
-                boost::asio::write(outputSocket, boost::asio::buffer(readBuffer, frameSize));
+                boost::asio::write(outputSocket, boost::asio::buffer(s_readBuffer, frameSize));
                
             }
                     
@@ -135,7 +166,7 @@ int main(int argc, char* argv[])
  
     outputSocket.close();   
     
-    std::cout << "Your seed was: " << seedValue << std::endl;
+    std::cout << "Your seed was: " << s_seedValue << std::endl;
     return 0;
 }
 

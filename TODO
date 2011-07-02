@@ -15,3 +15,5 @@
 11. --help command
 12. A better usage statement. Switch over to boost's options?
 13. Statistics (bytes, packets, files, loops(?), etc)
+14. Support windows? :(
+15. More OO approach. All logic in main is hard to unit test :x

@@ -1,0 +1,10 @@
+1. Recompute IP Checksum
+2. Recompute TCP Checksum
+3. Recompute UDP Checksum
+4. Convert IPv4 packets to IPv6 (randomly?)
+5. Add the ability to inject 802.1q or MPLS headers
+6. Start adding smart fuzzing stack:
+   a) ethernet
+   b) ipv4
+   c) tcp
+   d) udp

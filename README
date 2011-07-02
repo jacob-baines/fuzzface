@@ -1,49 +1,23 @@
-Fuzzface version 0.1009:
+#Fuzzface 
+```
+    version 0.1009:
+```
+Fuzzface is a protocol fuzzer. Given a directory of pcap files Fuzzface will alter
+the data and write it to a socket (still in pcap format). Currently, Fuzzface is
+a dumb fuzzer (random changes), but it is intended to turn into a dumb fuzzer.
 
+## Features
+    - Randomly fuzzes 10% of pcap file data (excluding pcap headers)
+    - Recursively parses a directory for pcap files
+    - Results are repeatable using provided seed
+    - Only works for pcaps with ethernet link layer (not a cool feature...)
 
-Fuzzface is a simple program that recursively walks a given directory tree looking for pcap files. When fuzzface believes it has found a pcap file then it will fuzz 10% of the packet data (not the pcap headers themselves). Fuzzface will then send the data out over a socket. Fuzzface will update the pcap packet header timestamp as it goes so that multiple files will look 'sequential.' Fuzzface does no honor the gap between the original timestamps. In short, fuzzface is (currently) a dumb pcap fuzzer.
+## Building
+make
 
-To invoke fuzzface:
+## Usage
+./fuzzface <directory> [seed value]
 
-./fuzzface <directory>
-
--or-
-
-./fuzzface <directory> <seed value>
-
-Where seed value is an integer. The seed is typically used to recreate previous runs.
-
-
-Socket info:
-Fuzzface is currently hard coded to connect to 127.0.0.1:11111 
-
-Gotchas:
-Currently fuzzface expects the pcap link layer to be ethernet. We will skip any
-file that does not have enet as its link layer.
-
-Dependencies:
+## Dependencies
 Boost 1.46.0+ (or simply 1.42.0+ with filesystem v3 enabled)
 
-Future Development:
-Fuzzface is intended to be a smart protocol fuzzer. Obviously, we have a long ways to go :)
-
-License:
-Copyright (C) 2011 by Jacob Baines
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.

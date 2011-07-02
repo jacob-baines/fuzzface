@@ -92,9 +92,9 @@ int main(int argc, char* argv[])
                 boost::asio::write(outputSocket, boost::asio::buffer(readBuffer, 24));
                 writeGlobal = false;
             }
-                        
+        
             while (!filestream.eof())
-            {
+            {   
                 //read start of next header
                 filestream.read(readBuffer, 16);
                         
@@ -106,15 +106,26 @@ int main(int argc, char* argv[])
                 timestamp = std::time(NULL);
                 memcpy(readBuffer, &timestamp, sizeof(boost::uint32_t));
                 memcpy(readBuffer + sizeof(boost::uint32_t), "\0\0\0\0", 4);
+                
+                boost::uint32_t frameSize = *reinterpret_cast<boost::uint32_t*>(readBuffer + 8);
+
+                if (frameSize > sizeof(readBuffer))
+                {
+                    std::cout << "Frame too large (" << frameSize
+                              << " bytes): " << iter->path().string()
+                              << std::endl;
+                    break;
+                }
+
                 boost::asio::write(outputSocket, boost::asio::buffer(readBuffer, 16));
-                boost::uint32_t frameSize = *reinterpret_cast<boost::uint32_t*>(readBuffer + 12);
-                        
+                                                               
                 filestream.read(readBuffer, frameSize);
                 packetModifier.modifyData(
-                reinterpret_cast<unsigned char*>(readBuffer),
-                static_cast<boost::uint16_t>(frameSize));
+                    reinterpret_cast<unsigned char*>(readBuffer),
+                    static_cast<boost::uint16_t>(frameSize));
                         
                 boost::asio::write(outputSocket, boost::asio::buffer(readBuffer, frameSize));
+               
             }
                     
             std::cout << "File completed: " << iter->path().string() << std::endl;

@@ -16,7 +16,9 @@ a dumb fuzzer (random changes), but it is intended to turn into a dumb fuzzer.
 make
 
 ## Usage
+```
 ./fuzzface <directory> <server ip address> <server port> [seed value]
+```
 
 ## Dependencies
 Boost 1.46.0+ (or simply 1.42.0+ with filesystem v3 enabled)

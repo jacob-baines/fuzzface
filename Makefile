@@ -6,7 +6,7 @@ PROGRAM_NAME = fuzzface
 # Set this variable to a space separated list of all object files to be
 # compiled.  For example:
 # OBJS = cmdline.o main.o
-OBJS = main.o ./modifier/randomizer.o
+OBJS = main.o fuzzface.o ./modifier/randomizer.o
 
 # Executable used to perform compile and link operations
 CXX = g++

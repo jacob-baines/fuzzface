@@ -11,13 +11,13 @@
 7. Support big endian files
 8. Unit tests
 9. Allow for infinitely looping over a directory
-10. Make code exception safe :x
+10. try / catch clean up. If I was more specific on catches I could combine a few of these
 11. --help command
 12. --version would probably be good too.
-12. A better usage statement. Switch over to boost's options?
+12. Switch over to boost's program options for command line params
 13. Statistics (bytes, packets, files, loops(?), etc)
 14. Support windows? :(
-15. More OO approach. All logic in main is hard to unit test :x
-16. Configure / make / make install? Not sure if this will be used that way.
-17. Better makefile. Completely hacked right now.
-18. Support other capture file formats
+15. Configure / make / make install? Not sure if this will be used that way.
+16. Better makefile. Completely hacked right now.
+17. Support other capture file formats
+18. Allow users to simply write out the file? Might nix this. Netcat will do this.

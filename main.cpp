@@ -1,30 +1,23 @@
-#include <arpa/inet.h>
-#include <fstream>
 #include <string>
 #include <cstdio>
-#include <ctime>
 #include <iostream>
-#include <boost/lexical_cast.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/asio.hpp>
-#include <boost/asio/ip/address.hpp>
-#include <boost/asio/io_service.hpp>
-#include "modifier/randomizer.hpp"
+#include <boost/lexical_cast.hpp>
 
-static char s_readBuffer[65356] = {0};
-static std::string s_rootDirectory;
-static int s_seedValue = 0;
+#include "fuzzface.hpp"
 
 /*
     Checks to make sure the command line params are present and
     valid. Also, initializes srand here.
 */
 bool validateInput(int argc, char* argv[],
-                   std::string& p_rootDirectory, int& p_seedValue)
+                   std::string& p_rootDirectory,
+                   boost::asio::ip::address& p_ipAddress,
+                   boost::uint16_t& p_port, int& p_seedValue)
 {
     //currently we need argc to be 2 or 3
-    if (argc < 2 || argc > 3)
+    if (argc < 4 || argc > 5)
     {
         return false;
     }
@@ -36,16 +29,38 @@ bool validateInput(int argc, char* argv[],
         return false;
     }
     
+    try
+    {
+        p_ipAddress.from_string(argv[2]);    
+    }
+    catch (std::exception&)
+    {
+        std::cerr << "Failed to convert the IP address paramater to a IPv4 or"
+                     " IPv6 address." << std::endl;
+        return false;
+    }
+    
+    try
+    {
+        p_port = boost::lexical_cast<boost::uint16_t>(argv[3]);
+    }
+    catch (std::exception&)
+    {
+        std::cerr << "Failed to convert port value to a 16 bit integer"
+                  << std::endl;
+        return false;
+    }
+    
     // use the seed provided or generate a new one
-    if (argc == 3)
+    if (argc == 5)
     {
         try
         {
-            p_seedValue = boost::lexical_cast<int>(argv[2]);
+            p_seedValue = boost::lexical_cast<int>(argv[4]);
         }
         catch (std::exception& e)
         {
-            std::cerr << "Failed to convert your seed value to an integer."
+            std::cerr << "Failed to convert seed parameter value to an integer."
                       << std::endl;
             return false;
         }
@@ -59,136 +74,44 @@ bool validateInput(int argc, char* argv[],
     return true;
 }
 
-/*
-    Reads in the PCAP global header and tries to verify that
-    the file is little endian pcap with ethernet link type.
-    
-    \return true iff the file is little endian pcap with enet link type
-*/
-bool validateGlobalHeader(std::ifstream& p_fileStream, 
-                          boost::filesystem::recursive_directory_iterator& p_iter,
-                          char* p_readBuffer)
-{
-    if (!p_fileStream.good())
-    {
-        std::cerr << "File skipped: " << p_iter->path().string()
-                  << " failed to open." << std::endl;
-        return false;                
-    }
-            
-    //read the global pcap header
-    p_fileStream.read(p_readBuffer, 24);
-                
-    if (p_fileStream.eof())
-    {
-        std::cerr << "File skipped: " << p_iter->path().string()
-                  << " not enough data." << std::endl;
-        p_fileStream.close();
-        return false;
-    }
-    
-    //check for PCAP magic bytes (little endian)        
-    if (memcmp(p_readBuffer, "\xd4\xc3\xb2\xa1", 4) != 0)
-    {
-        std::cerr << "File skipped: " << p_iter->path().string()
-                  << " couldn't find magic bytes." << std::endl;
-        p_fileStream.close();
-        return false;
-    }
-    
-    //verify link type in PCAP header
-    if (memcmp(p_readBuffer + 20, "\x01\x00\x00\x00", 4) != 0)
-    {
-        std::cerr << "File skipped: " << p_iter->path().string() 
-                  << " link type is not ethernet." << std::endl;
-        p_fileStream.close();
-        return false;
-    }
-    
-    return true;
-}
-
 int main(int argc, char* argv[])
-{   
-    if (!validateInput(argc, argv, s_rootDirectory, s_seedValue))
+{
+    //expected command line params
+    int seedValue = 0;
+    boost::uint16_t port = 0;
+    std::string rootDirectory;
+    boost::asio::ip::address ipAddress;
+   
+    if (!validateInput(argc, argv, rootDirectory, ipAddress, port, seedValue))
     {
-        std::cout << "Usage: ./fuzzface <directory>" << std::endl;
+        std::cout << "Usage: ./fuzzface <directory> <server ip> <server port>"
+                     " [optional seed]" << std::endl;
         return EXIT_FAILURE;
     }
     
-    std::ifstream filestream;
-    modifier::Randomizer packetModifier;    
-    bool writeGlobal = true;
+    FuzzFace pcapFuzzer;
     
-    boost::asio::io_service ioHandler;
-    boost::asio::ip::tcp::socket outputSocket(ioHandler);
-    boost::asio::ip::tcp::endpoint server(boost::asio::ip::address::from_string("127.0.0.1"), 11111);
-    outputSocket.connect(server);
-
-    boost::uint32_t timestamp = 0;
-    
-    for (boost::filesystem::recursive_directory_iterator iter(s_rootDirectory);
-         iter != boost::filesystem::recursive_directory_iterator(); ++iter)
+    try
     {
-        if (boost::filesystem::is_regular_file(iter->path()))
-        {
-            filestream.open(iter->path().string().c_str(), std::ifstream::in);
-            
-            if (!validateGlobalHeader(filestream, iter, s_readBuffer))
-            {
-                //skip this file
-                continue;
-            }
-                              
-            if (writeGlobal)
-            {
-                boost::asio::write(outputSocket, boost::asio::buffer(s_readBuffer, 24));
-                writeGlobal = false;
-            }
-        
-            while (!filestream.eof())
-            {   
-                //read start of next header
-                filestream.read(s_readBuffer, 16);
-                        
-                if (filestream.eof())
-                {
-                    break;
-                }
-                                           
-                timestamp = std::time(NULL);
-                memcpy(s_readBuffer, &timestamp, sizeof(boost::uint32_t));
-                memcpy(s_readBuffer + sizeof(boost::uint32_t), "\0\0\0\0", 4);
-                
-                boost::uint32_t frameSize = *reinterpret_cast<boost::uint32_t*>(s_readBuffer + 8);
-
-                if (frameSize > sizeof(s_readBuffer))
-                {
-                    std::cout << "Frame too large (" << frameSize
-                              << " bytes): " << iter->path().string()
-                              << std::endl;
-                    break;
-                }
-
-                boost::asio::write(outputSocket, boost::asio::buffer(s_readBuffer, 16));
-                                                               
-                filestream.read(s_readBuffer, frameSize);
-                packetModifier.modifyData(
-                    reinterpret_cast<unsigned char*>(s_readBuffer),
-                    static_cast<boost::uint16_t>(frameSize));
-                        
-                boost::asio::write(outputSocket, boost::asio::buffer(s_readBuffer, frameSize));
-               
-            }
-                    
-            std::cout << "File completed: " << iter->path().string() << std::endl;
-            filestream.close();
-        }
+        pcapFuzzer.connect(ipAddress, port);
     }
- 
-    outputSocket.close();   
+    catch (std::exception& e)
+    {
+        std::cerr << "Failed to connect the server: " << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
     
-    std::cout << "Your seed was: " << s_seedValue << std::endl;
+    try
+    {
+        pcapFuzzer.processFiles(rootDirectory);
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << "Shutting down. Error while processing: " << e.what()
+                  << std::endl;
+    }
+    
+    std::cout << "Your seed was: " << seedValue << std::endl;
     return 0;
 }
 

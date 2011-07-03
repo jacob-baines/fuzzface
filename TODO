@@ -15,9 +15,8 @@
 11. --help command
 12. --version would probably be good too.
 12. Switch over to boost's program options for command line params
-13. Statistics (bytes, packets, files, loops(?), etc)
-14. Support windows? :(
-15. Configure / make / make install? Not sure if this will be used that way.
-16. Better makefile. Completely hacked right now.
-17. Support other capture file formats
-18. Allow users to simply write out the file? Might nix this. Netcat will do this.
+13. Support windows? :(
+14. Configure / make / make install? Not sure if this will be used that way.
+15. Better makefile. Completely hacked right now.
+16. Support other capture file formats
+17. Allow users to simply write out the file? Might nix this. Netcat will do this.

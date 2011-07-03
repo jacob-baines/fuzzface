@@ -110,8 +110,10 @@ int main(int argc, char* argv[])
         std::cerr << "Shutting down. Error while processing: " << e.what()
                   << std::endl;
     }
-    
-    std::cout << "Your seed was: " << seedValue << std::endl;
+
+    pcapFuzzer.printStats();
+        
+    std::cout << "\nYour seed was: " << seedValue << std::endl;
     return 0;
 }
 

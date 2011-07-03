@@ -1,6 +1,6 @@
 #Fuzzface 
 ```
-    version 0.1010:
+    version 0.1011:
 ```
 Fuzzface is a protocol fuzzer. Given a directory of pcap files Fuzzface will alter
 the data and write it to a socket (still in pcap format). Currently, Fuzzface is

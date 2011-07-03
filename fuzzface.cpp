@@ -5,18 +5,51 @@
 #include <iostream>
 #include <arpa/inet.h>
 
+#include <boost/spirit/include/karma.hpp>
+#include <boost/spirit/include/karma_generate.hpp>
+#include <boost/spirit/include/karma_uint.hpp>
+
 // the buffer to read into / write out with
 static char s_readBuffer[65356] = {0};
 
 FuzzFace::FuzzFace() :
     m_randomizer(),
     m_ioHandler(),
-    m_socketOutput(m_ioHandler)
+    m_socketOutput(m_ioHandler),
+    m_totalBytes(0),
+    m_totalPackets(0),
+    m_fuzzedFiles(0),
+    m_skippedFiles(0)
 {
 }
 
 FuzzFace::~FuzzFace()
 {
+}
+
+void FuzzFace::printStats() const
+{
+    std::cout << "\n===Processing Statistics===" << std::endl;
+    std::string output("Files Fuzzed: ");
+    generateStat(output, m_fuzzedFiles);
+    
+    output.assign("Skipped Files: ");
+    generateStat(output, m_skippedFiles);
+    
+    output.assign("Total Packets Processed: ");
+    generateStat(output, m_totalPackets);
+    
+    output.assign("Total Bytes Processed: ");
+    generateStat(output, m_totalBytes);
+}
+
+void FuzzFace::generateStat(std::string& p_output, boost::uint64_t p_stat) const
+{
+    boost::spirit::karma::generate(
+        std::back_insert_iterator<std::string>(p_output),
+        boost::spirit::karma::ulong_long, p_stat);
+    
+    std::cout << p_output << std::endl;
 }
 
 void FuzzFace::connect(const boost::asio::ip::address& p_serverAddress,
@@ -85,9 +118,11 @@ void FuzzFace::processFiles(const std::string& p_rootDirectory)
             if (!validateGlobalHeader(currentFile, iter, s_readBuffer))
             {
                 //skip this file
+                ++m_skippedFiles;
                 continue;
             }
-                              
+
+            ++m_fuzzedFiles;                             
             if (writeGlobal)
             {
                 boost::asio::write(m_socketOutput, boost::asio::buffer(s_readBuffer, 24));
@@ -118,6 +153,8 @@ void FuzzFace::processFiles(const std::string& p_rootDirectory)
                     break;
                 }
 
+                ++m_totalPackets;
+                m_totalBytes += frameSize;
                 boost::asio::write(m_socketOutput, boost::asio::buffer(s_readBuffer, 16));
                                                                
                 currentFile.read(s_readBuffer, frameSize);
